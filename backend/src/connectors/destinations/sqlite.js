@@ -15,6 +15,7 @@ class SqliteDestination extends BaseDestination {
     this.displayName = 'SQLite';
     this.description = 'Load data into a local SQLite database file — great for testing and embedded analytics.';
     this.icon = '🗄️';
+    this.category = 'Database';
   }
 
   spec() {

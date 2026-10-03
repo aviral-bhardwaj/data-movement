@@ -1,8 +1,9 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import api from '../api';
+import ConnIcon from '../components/ConnIcon';
 
-// Connection setup wizard: source -> destination -> stream selection -> schedule.
+// Connection setup wizard: endpoints -> streams -> schedule.
 export default function ConnectionNew() {
   const nav = useNavigate();
   const [step, setStep] = React.useState(0);
@@ -23,6 +24,10 @@ export default function ConnectionNew() {
     api.get('/destinations').then((r) => setDests(r.data));
   }, []);
 
+  const src = sources.find((s) => s.id === sourceId);
+  const dst = dests.find((d) => d.id === destId);
+  const enabledCount = Object.values(selected).filter((s) => s.enabled).length;
+
   const discover = async () => {
     setBusy(true); setError('');
     try {
@@ -41,7 +46,7 @@ export default function ConnectionNew() {
         };
       }
       setSelected(sel);
-      setStep(2);
+      setStep(1);
     } catch (e) {
       setError(e.response?.data?.error || e.message);
     } finally { setBusy(false); }
@@ -58,96 +63,131 @@ export default function ConnectionNew() {
           destinationName: v.destinationName, jsonSchema: v.jsonSchema,
         }));
       const r = await api.post('/connections', {
-        name: name || `connection-${Date.now()}`,
+        name: name || `${src?.name || 'source'} → ${dst?.name || 'destination'}`,
         sourceId, destinationId: destId, catalog: { streams },
         scheduleType, scheduleValue: scheduleType === 'manual' ? null : scheduleValue,
       });
-      nav(`/connections/${r.data.id}`);
+      nav(`/app/connections/${r.data.id}`);
     } catch (e) {
       setError(e.response?.data?.error || e.message);
       setBusy(false);
     }
   };
 
+  const STEPS = ['Endpoints', 'Streams', 'Schedule'];
+
   return (
-    <div>
-      <h1>New connection</h1>
-      <div className="tabs">
-        {['Endpoints', 'Streams', 'Schedule'].map((t, i) => (
-          <button key={t} className={step === i ? 'active' : ''} onClick={() => i < step && setStep(i)}>{i + 1}. {t}</button>
+    <div style={{ maxWidth: 860 }}>
+      <div className="page-head">
+        <div><h1>New connection</h1><div className="sub">Wire a source to a destination</div></div>
+      </div>
+
+      <div className="wizard-steps">
+        {STEPS.map((t, i) => (
+          <React.Fragment key={t}>
+            <div className={`ws ${i < step ? 'done' : i === step ? 'current' : ''}`}>
+              <span className="wn">{i < step ? '✓' : i + 1}</span> {t}
+            </div>
+            {i < STEPS.length - 1 && <span className="ws-sep" />}
+          </React.Fragment>
         ))}
       </div>
 
       {step === 0 && (
         <div className="card">
-          <div className="row">
-            <div>
-              <label>Source</label>
-              <select value={sourceId} onChange={(e) => setSourceId(e.target.value)}>
-                <option value="">— choose —</option>
-                {sources.map((s) => <option key={s.id} value={s.id}>{s.icon} {s.name} ({s.connector_name})</option>)}
-              </select>
-              {!sources.length && <div className="hint">No sources — <a href="/sources">create one first</a>.</div>}
+          <h3>Source</h3>
+          {sources.length ? (
+            <div className="pick-grid">
+              {sources.map((s) => (
+                <div key={s.id} className={`pick ${sourceId === s.id ? 'sel' : ''}`} onClick={() => setSourceId(s.id)}>
+                  <ConnIcon name={s.connector_name} icon={s.icon} size="sm" />
+                  <div style={{ minWidth: 0 }}>
+                    <div className="nm">{s.name}</div>
+                    <div className="sm">{s.connector_name}</div>
+                  </div>
+                </div>
+              ))}
             </div>
-            <div>
-              <label>Destination</label>
-              <select value={destId} onChange={(e) => setDestId(e.target.value)}>
-                <option value="">— choose —</option>
-                {dests.map((d) => <option key={d.id} value={d.id}>{d.icon} {d.name} ({d.connector_name})</option>)}
-              </select>
-              {!dests.length && <div className="hint">No destinations — <a href="/destinations">create one first</a>.</div>}
+          ) : (
+            <div className="alert-bar info">No sources yet — <Link to="/app/sources">create one first</Link>.</div>
+          )}
+
+          <h3 style={{ marginTop: 22 }}>Destination</h3>
+          {dests.length ? (
+            <div className="pick-grid">
+              {dests.map((d) => (
+                <div key={d.id} className={`pick ${destId === d.id ? 'sel' : ''}`} onClick={() => setDestId(d.id)}>
+                  <ConnIcon name={d.connector_name} icon={d.icon} size="sm" />
+                  <div style={{ minWidth: 0 }}>
+                    <div className="nm">{d.name}</div>
+                    <div className="sm">{d.connector_name}</div>
+                  </div>
+                </div>
+              ))}
             </div>
-          </div>
+          ) : (
+            <div className="alert-bar info">No destinations yet — <Link to="/app/destinations">create one first</Link>.</div>
+          )}
+
           <label>Connection name</label>
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Postgres → Warehouse" />
-          <div style={{ marginTop: 16 }}>
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder={src && dst ? `${src.name} → ${dst.name}` : 'e.g. Postgres → Warehouse'} />
+          <div style={{ marginTop: 20 }}>
             <button className="btn" disabled={!sourceId || !destId || busy} onClick={discover}>
-              {busy ? 'Discovering…' : 'Discover streams →'}
+              {busy ? <><span className="spinner" /> Discovering…</> : 'Discover streams →'}
             </button>
           </div>
           {error && <div className="error-text">{error}</div>}
         </div>
       )}
 
-      {step === 2 && catalog && (
+      {step === 1 && catalog && (
         <div className="card">
-          <h3 style={{ marginTop: 0 }}>Select streams ({catalog.streams.length} discovered)</h3>
-          {catalog.streams.map((s) => {
-            const sel = selected[s.name] || {};
-            return (
-              <div className="stream-row" key={s.name}>
-                <input type="checkbox" checked={!!sel.enabled}
-                  onChange={(e) => setSelected({ ...selected, [s.name]: { ...sel, enabled: e.target.checked } })} />
-                <div className="grow">
-                  <b>{s.namespace ? `${s.namespace}.` : ''}{s.name}</b>
-                  <span className="pill">{Object.keys(s.jsonSchema?.properties || {}).length} cols</span>
-                  {s.sourceDefinedPrimaryKey?.length > 0 && <span className="pill">pk: {s.sourceDefinedPrimaryKey.join(',')}</span>}
-                </div>
-                <select value={sel.syncMode} onChange={(e) => setSelected({ ...selected, [s.name]: { ...sel, syncMode: e.target.value } })}>
-                  {s.supportedSyncModes.map((m) => <option key={m} value={m}>{m}</option>)}
-                </select>
-                {(sel.syncMode === 'incremental') && (
-                  <select value={sel.cursorField} onChange={(e) => setSelected({ ...selected, [s.name]: { ...sel, cursorField: e.target.value } })}>
-                    <option value="">cursor…</option>
-                    {(s.availableCursorFields || []).map((f) => <option key={f} value={f}>{f}</option>)}
+          <div className="row between" style={{ marginBottom: 10 }}>
+            <h3 style={{ margin: 0 }}>Streams — {catalog.streams.length} discovered, {enabledCount} selected</h3>
+            <div className="row shrink" style={{ gap: 6 }}>
+              <button className="btn small ghost" onClick={() => setSelected(Object.fromEntries(Object.entries(selected).map(([k, v]) => [k, { ...v, enabled: true }])))}>All</button>
+              <button className="btn small ghost" onClick={() => setSelected(Object.fromEntries(Object.entries(selected).map(([k, v]) => [k, { ...v, enabled: false }])))}>None</button>
+            </div>
+          </div>
+          <div style={{ maxHeight: 440, overflow: 'auto' }}>
+            {catalog.streams.map((s) => {
+              const sel = selected[s.name] || {};
+              return (
+                <div className="stream-row" key={s.name}>
+                  <input type="checkbox" checked={!!sel.enabled}
+                    onChange={(e) => setSelected({ ...selected, [s.name]: { ...sel, enabled: e.target.checked } })} />
+                  <div className="grow">
+                    <b>{s.namespace ? `${s.namespace}.` : ''}{s.name}</b>{' '}
+                    <span className="pill">{Object.keys(s.jsonSchema?.properties || {}).length} cols</span>
+                    {s.sourceDefinedPrimaryKey?.length > 0 && <span className="pill">pk {s.sourceDefinedPrimaryKey.join(',')}</span>}
+                  </div>
+                  <select value={sel.syncMode} onChange={(e) => setSelected({ ...selected, [s.name]: { ...sel, syncMode: e.target.value } })}>
+                    {s.supportedSyncModes.map((m) => <option key={m} value={m}>{m}</option>)}
                   </select>
-                )}
-                <input style={{ width: 180 }} value={sel.destinationName || ''} placeholder="dest table"
-                  onChange={(e) => setSelected({ ...selected, [s.name]: { ...sel, destinationName: e.target.value } })} />
-              </div>
-            );
-          })}
-          <div style={{ marginTop: 16 }}>
-            <button className="btn" onClick={() => setStep(3)}>Schedule →</button>
+                  {sel.syncMode === 'incremental' && (
+                    <select value={sel.cursorField} onChange={(e) => setSelected({ ...selected, [s.name]: { ...sel, cursorField: e.target.value } })}>
+                      <option value="">cursor…</option>
+                      {(s.availableCursorFields || []).map((f) => <option key={f} value={f}>{f}</option>)}
+                    </select>
+                  )}
+                  <input type="text" value={sel.destinationName || ''} placeholder="dest table"
+                    onChange={(e) => setSelected({ ...selected, [s.name]: { ...sel, destinationName: e.target.value } })} />
+                </div>
+              );
+            })}
+          </div>
+          <div className="row" style={{ marginTop: 18, gap: 8 }}>
+            <button className="btn" onClick={() => setStep(2)} disabled={!enabledCount}>Schedule →</button>
+            <button className="btn ghost" onClick={() => setStep(0)}>← Back</button>
           </div>
         </div>
       )}
 
-      {step === 3 && (
+      {step === 2 && (
         <div className="card">
-          <h3 style={{ marginTop: 0 }}>Sync schedule</h3>
+          <h3>Sync schedule</h3>
           <label>Frequency</label>
-          <select value={scheduleType} onChange={(e) => setScheduleType(e.target.value)} style={{ width: 260 }}>
+          <select value={scheduleType} onChange={(e) => setScheduleType(e.target.value)} style={{ width: 300 }}>
             <option value="manual">Manual only</option>
             <option value="interval">Interval</option>
             <option value="cron">Cron expression</option>
@@ -156,26 +196,31 @@ export default function ConnectionNew() {
           {scheduleType === 'interval' && (
             <>
               <label>Every</label>
-              <input style={{ width: 160 }} value={scheduleValue} onChange={(e) => setScheduleValue(e.target.value)} />
+              <input style={{ width: 180 }} value={scheduleValue} onChange={(e) => setScheduleValue(e.target.value)} />
               <div className="hint">e.g. 15m, 1h, 30s, 1d</div>
             </>
           )}
           {scheduleType === 'cron' && (
             <>
               <label>Cron</label>
-              <input style={{ width: 260 }} value={scheduleValue} onChange={(e) => setScheduleValue(e.target.value)} placeholder="0 */6 * * *" />
+              <input style={{ width: 300 }} value={scheduleValue} onChange={(e) => setScheduleValue(e.target.value)} placeholder="0 */6 * * *" />
             </>
           )}
           {scheduleType === 'cdc' && (
             <>
               <label>Drain interval</label>
-              <input style={{ width: 160 }} value={scheduleValue} onChange={(e) => setScheduleValue(e.target.value)} />
+              <input style={{ width: 180 }} value={scheduleValue} onChange={(e) => setScheduleValue(e.target.value)} />
               <div className="hint">How often to drain the replication slot (e.g. 30s).</div>
             </>
           )}
-          <div className="row" style={{ marginTop: 20 }}>
-            <button className="btn" onClick={create} disabled={busy}>{busy ? 'Creating…' : 'Create connection'}</button>
-            <button className="btn secondary" onClick={() => setStep(2)}>← Back</button>
+
+          <div className="alert-bar info" style={{ marginTop: 20 }}>
+            <b>{enabledCount}</b> streams · <b>{src?.name}</b> → <b>{dst?.name}</b> · {scheduleType === 'manual' ? 'manual trigger' : `${scheduleType} ${scheduleValue}`}
+          </div>
+
+          <div className="row" style={{ marginTop: 14, gap: 8 }}>
+            <button className="btn" onClick={create} disabled={busy}>{busy ? <><span className="spinner" /> Creating…</> : 'Create connection'}</button>
+            <button className="btn ghost" onClick={() => setStep(1)}>← Back</button>
           </div>
           {error && <div className="error-text">{error}</div>}
         </div>

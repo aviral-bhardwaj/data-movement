@@ -25,6 +25,10 @@ class BaseConnector {
     this.description = '';
     this.icon = '🔌';
     this.supportedSyncModes = [];
+    this.category = null;        // Applications | Databases | Events | Files | Functions | Logs
+    this.catalogSlug = null;     // slug used to merge with the public catalog
+    this.catalogName = null;     // exact display name in the catalog (for slug-sharing variants)
+    this.badge = null;           // Lite | Beta | Partner-Built | ...
   }
 
   spec() {

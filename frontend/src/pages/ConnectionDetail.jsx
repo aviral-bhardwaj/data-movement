@@ -26,14 +26,19 @@ export default function ConnectionDetail() {
   if (!conn) return <div className="main">loading…</div>;
   return (
     <div>
-      <div className="row" style={{ marginBottom: 8 }}>
-        <h1 style={{ margin: 0 }}>{conn.name}</h1>
-        <button className="btn shrink" onClick={async () => { await api.post(`/connections/${id}/sync`); load(); }}>Sync now</button>
+      <div className="page-head">
+        <div>
+          <h1>{conn.name}</h1>
+          <div className="sub">
+            {conn.source_connector} → {conn.destination_connector} · {conn.schedule_type}{conn.schedule_value ? ` (${conn.schedule_value})` : ''}
+          </div>
+        </div>
+        <div className="row shrink" style={{ gap: 8 }}>
+          <StatusBadge status={conn.status} />
+          <button className="btn" onClick={async () => { await api.post(`/connections/${id}/sync`); load(); }}>Sync now</button>
+        </div>
       </div>
-      <p className="muted" style={{ marginTop: 0 }}>
-        {conn.source_connector} → {conn.destination_connector} · schedule: {conn.schedule_type}{conn.schedule_value ? ` (${conn.schedule_value})` : ''} · <StatusBadge status={conn.status} />
-        {conn.webhook_url && <> · webhook: <code>{conn.webhook_url}</code></>}
-      </p>
+      {conn.webhook_url && <p className="muted" style={{ marginTop: 0 }}>Webhook: <code>{conn.webhook_url}</code></p>}
 
       <div className="tabs">
         <button className={tab === 'jobs' ? 'active' : ''} onClick={() => setTab('jobs')}>Sync history</button>
@@ -42,7 +47,7 @@ export default function ConnectionDetail() {
       </div>
 
       {tab === 'jobs' && (
-        <div className="card">
+        <div className="card pad0">
           <table>
             <thead><tr><th>Started</th><th>Status</th><th>Trigger</th><th>Attempt</th><th>Read</th><th>Written</th><th>Failed</th><th></th></tr></thead>
             <tbody>
@@ -62,9 +67,9 @@ export default function ConnectionDetail() {
             </tbody>
           </table>
           {logJob && (
-            <div style={{ marginTop: 16 }}>
-              <h4>Logs — job {logJob.slice(0, 8)} <button className="btn small secondary" onClick={() => setLogJob(null)}>close</button></h4>
-              <div style={{ maxHeight: 320, overflow: 'auto' }}>
+            <div style={{ padding: '0 20px 16px' }}>
+              <h4>Logs — job {logJob.slice(0, 8)} <button className="btn small ghost" onClick={() => setLogJob(null)}>close</button></h4>
+              <div className="log-view">
                 {(logs || []).map((l) => (
                   <div key={l.id} className={`log-line ${l.level}`}>
                     <span className="muted">{new Date(l.ts).toLocaleTimeString()}</span> [{l.level}] {l.message}
@@ -78,7 +83,7 @@ export default function ConnectionDetail() {
       )}
 
       {tab === 'streams' && (
-        <div className="card">
+        <div className="card pad0">
           <table>
             <thead><tr><th>Stream</th><th>Mode</th><th>Cursor</th><th>Primary key</th><th>Destination</th></tr></thead>
             <tbody>

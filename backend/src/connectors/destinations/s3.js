@@ -11,6 +11,8 @@ class S3Destination extends BaseDestination {
     this.displayName = 'S3 / Data Lake';
     this.description = 'Write streams as JSONL objects to S3 or any S3-compatible object store.';
     this.icon = '🪣';
+    this.category = 'Data Lake';
+    this.catalogSlug = 'amazon-s3';
   }
 
   spec() {

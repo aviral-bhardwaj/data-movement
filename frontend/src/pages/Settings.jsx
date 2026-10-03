@@ -26,9 +26,11 @@ export default function Settings() {
 
   return (
     <div>
-      <h1>Settings</h1>
+      <div className="page-head">
+        <div><h1>Settings</h1><div className="sub">API access, users and audit log</div></div>
+      </div>
       <div className="card">
-        <h3 style={{ marginTop: 0 }}>API keys</h3>
+        <h3>API keys</h3>
         <p className="muted">Use <code>x-api-key</code> header for programmatic access.</p>
         <div className="row" style={{ maxWidth: 480 }}>
           <input value={keyName} onChange={(e) => setKeyName(e.target.value)} placeholder="key name" />

@@ -12,6 +12,8 @@ class MysqlDestination extends BaseDestination {
     this.displayName = 'MySQL';
     this.description = 'Load data into MySQL with schema creation and PK upserts.';
     this.icon = '🐬';
+    this.category = 'Database';
+    this.catalogSlug = 'mysql';
   }
 
   spec() {
@@ -164,3 +166,4 @@ class MysqlDestination extends BaseDestination {
 }
 
 module.exports = new MysqlDestination();
+module.exports.MysqlDestination = MysqlDestination;

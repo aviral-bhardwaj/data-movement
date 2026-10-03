@@ -10,6 +10,9 @@ class PostgresSource extends BaseSource {
     this.displayName = 'PostgreSQL';
     this.description = 'Sync tables from PostgreSQL via full refresh, cursor-based incremental, or logical replication CDC (Debezium-style).';
     this.icon = '🐘';
+    this.category = 'Databases';
+    this.catalogSlug = 'postgresql';
+    this.catalogName = 'PostgreSQL';
     this.supportedSyncModes = ['full_refresh', 'incremental', 'cdc'];
   }
 
@@ -304,3 +307,4 @@ function pgToJson(col) {
 }
 
 module.exports = new PostgresSource();
+module.exports.PostgresSource = PostgresSource;

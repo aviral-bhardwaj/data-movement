@@ -12,6 +12,8 @@ class PostgresDestination extends BaseDestination {
     this.displayName = 'PostgreSQL';
     this.description = 'Load data into PostgreSQL with schema creation, PK upserts, schema evolution and CDC apply.';
     this.icon = '🐘';
+    this.category = 'Database';
+    this.catalogSlug = 'postgresql';
   }
 
   spec() {
@@ -230,3 +232,4 @@ class PostgresDestination extends BaseDestination {
 }
 
 module.exports = new PostgresDestination();
+module.exports.PostgresDestination = PostgresDestination;

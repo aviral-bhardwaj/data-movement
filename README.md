@@ -67,26 +67,64 @@ node src/seed/demo-setup.js --cdc                  # CDC demo (publication+slot,
 docker compose up -d --build    # postgres + redis + api + scheduler + workers + web(:5173)
 ```
 
-## Connectors (16)
+## Connectors (790+ in the catalog · 140+ implemented)
 
-| Type | Connector | Sync modes |
-|------|-----------|------------|
-| Source | PostgreSQL | full refresh, incremental cursor, **CDC (logical replication)** |
-| Source | MySQL | full refresh, incremental |
-| Source | MongoDB | full refresh, incremental (`_id`/date cursor) |
-| Source | REST API | generic: auth, pagination (offset/page/cursor/link), record paths |
-| Source | Stripe | customers, charges, invoices, subscriptions, … incremental on `created` |
-| Source | File | CSV/JSON/JSONL from disk or HTTP |
-| Source | Webhook | generated endpoint buffers events to Redis, drained on schedule |
-| Source | Kafka | consume N messages per run |
-| Dest | PostgreSQL | create/evolve schema, PK upsert, CDC apply (insert/update/delete) |
-| Dest | MySQL | same, `ON DUPLICATE KEY UPDATE` |
-| Dest | SQLite | local warehouse file — zero-dependency testing |
-| Dest | MongoDB | upsert/replace on PK |
-| Dest | File | CSV / JSONL output |
-| Dest | S3 | JSONL objects (AWS, MinIO, R2, LocalStack) |
-| Dest | Snowflake | staged JSON + COPY INTO (needs `snowflake-sdk`) |
-| Dest | BigQuery | streaming insertAll (needs `@google-cloud/bigquery`) |
+The catalog ships the full public Fivetran connector directory (~790 entries, synced to
+`connector_definitions` on seed) — every catalog entry is searchable/browsable in the UI
+with category, badge and docs links. Connectors marked **Ready** have real implementations;
+the rest are listed as catalog entries until they get one.
+
+### Native source connectors
+
+| Connector | Sync modes |
+|-----------|------------|
+| PostgreSQL (+ Aurora, Azure, GCP, Heroku, RDS, CockroachDB variants) | full, incremental, **CDC (logical replication)** |
+| MySQL (+ MariaDB, Aurora, Azure, GCP, RDS, PlanetScale, SingleStore) | full, incremental |
+| SQL Server (+ RDS, Azure DB/MI, GCP) | full, incremental |
+| Oracle (+ RAC, RDS) | full, incremental |
+| MongoDB (+ Sharded) | full, incremental |
+| Elasticsearch, Redis, SQLite, ClickHouse, DynamoDB | full, incremental |
+| Stripe | full, incremental |
+| REST API | generic: auth, pagination, record paths |
+| File (CSV/JSON/JSONL), Webhook, Kafka | — |
+
+### Spec-driven SaaS connectors (~90)
+
+`backend/src/connectors/sources/_specd/` contains declarative specs interpreted by a
+shared REST engine (`_specd/engine.js`) — auth (bearer/basic/API-key/OAuth-CC/raw header),
+pagination (offset/page/cursor/link/body), nested record paths, incremental cursors,
+N-level child resources, and record mapping.
+
+CRM: HubSpot, Salesforce, Pipedrive, Close, Zoho CRM, Insightly, Attio, Copper
+Support: Zendesk, Freshdesk, Intercom, Help Scout, Gorgias, Front
+DevTools: GitHub, GitLab, Jira, Linear, Asana, Trello, ClickUp, Monday.com, Notion,
+Airtable, Sentry, CircleCI, Buildkite, PagerDuty, Shortcut, Datadog
+Marketing/Email: Mailchimp, Klaviyo, SendGrid, Mailgun, Customer.io, Braze, Iterable,
+Brevo, ActiveCampaign, Campaign Monitor, Postmark
+Commerce: Shopify, Square, Chargebee, Recurly, WooCommerce, BigCommerce, Magento
+HR: BambooHR, Greenhouse, Lever, Workable, Ashby, Personio, Gusto, SmartRecruiters,
+Factorial, HiBob
+Finance: QuickBooks, Xero, Zuora, FreshBooks
+Ads/Analytics: Facebook Ads, Google Ads, LinkedIn Ads, Pinterest Ads, X Ads, Snapchat
+Ads, GA4, Google Search Console, Mixpanel, PostHog, Okta, Auth0, Statuspage,
+LaunchDarkly, Segment, Statsig
+Comms/Files: Slack, Twilio, Calendly, Typeform, SurveyMonkey, Zoom, Discord, Box,
+Dropbox, Google Drive, Google Sheets
+
+### Destinations
+
+| Destination | Notes |
+|-------------|-------|
+| PostgreSQL | schema create/evolve, PK upsert, CDC apply (i/u/d) |
+| Redshift | Postgres protocol, SUPER columns for JSON |
+| MySQL (+ SingleStore) | `ON DUPLICATE KEY UPDATE` |
+| SQL Server (+ Azure Synapse) | MERGE-based upserts, CDC delete apply |
+| SQLite, MongoDB | upsert on PK |
+| ClickHouse | JSONEachRow over HTTP, ReplacingMergeTree |
+| Elasticsearch | bulk API, CDC delete support |
+| S3, GCS, Azure Blob | JSONL objects per stream |
+| Snowflake, BigQuery, Databricks | lazy SDK (`snowflake-sdk`, `@google-cloud/bigquery`, `@databricks/sql`) |
+| Kafka | one topic per stream, JSON payloads |
 
 ## Sync modes
 
@@ -127,6 +165,8 @@ GET  /api/syncs                       GET  /api/syncs/:id/logs      POST /api/sy
 GET  /api/logs                        GET  /api/metrics/overview|timeseries|connectors
 GET  /api/health                      POST /webhooks/:token        (public ingest)
 GET  /api/audit                       POST /api/auth/apikeys
+GET  /api/connectors?q=&type=&category=&implemented=&letter=
+GET  /api/connectors/meta/facets      GET  /api/public/stats      GET  /api/public/connectors
 ```
 
 Docs: [`docs/architecture.md`](docs/architecture.md) ·

@@ -13,6 +13,7 @@ class FileDestination extends BaseDestination {
     this.displayName = 'File (CSV/JSONL)';
     this.description = 'Write streams to local CSV or JSONL files, one file per stream per sync.';
     this.icon = '📁';
+    this.category = 'File';
   }
 
   spec() {

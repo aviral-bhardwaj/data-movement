@@ -12,11 +12,14 @@ function loadDir(dir, type) {
     if (!file.endsWith('.js') || file.startsWith('_')) continue;
     try {
       const mod = require(path.join(dir, file));
-      const conn = mod.default || mod;
-      const instance = typeof conn === 'function' ? new conn() : conn;
-      if (!instance || !instance.name) continue;
-      instance.type = type;
-      registry.set(instance.name, instance);
+      // A module may export a single connector or an array (spec-driven packs, db variants).
+      const items = Array.isArray(mod) ? mod : [mod.default || mod];
+      for (const conn of items) {
+        const instance = typeof conn === 'function' ? new conn() : conn;
+        if (!instance || !instance.name) continue;
+        instance.type = type;
+        registry.set(instance.name, instance);
+      }
     } catch (e) {
       // Optional connectors may miss deps; skip but note it.
       console.warn(`[registry] skipped ${file}: ${e.message}`);

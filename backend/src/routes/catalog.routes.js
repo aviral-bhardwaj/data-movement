@@ -9,13 +9,27 @@ const router = express.Router();
 router.use(authenticate);
 
 // ---- connector catalog ----
+// ?type=source|destination  ?implemented=true  ?category=Applications  ?q=stripe  ?letter=a
 router.get('/connectors', asyncWrap(async (req, res) => {
-  const defs = await db.many(
-    `SELECT id, name, type, version, display_name, description, icon, spec, supported_sync_modes
-     FROM connector_definitions ${req.query.type ? 'WHERE type=$1' : ''} ORDER BY type, display_name`,
-    req.query.type ? [req.query.type] : []
-  );
-  res.json(defs);
+  const params = [], conds = [];
+  if (req.query.type) { params.push(req.query.type); conds.push(`type=$${params.length}`); }
+  if (req.query.implemented !== undefined) { params.push(req.query.implemented === 'true'); conds.push(`implemented=$${params.length}`); }
+  if (req.query.category) { params.push(req.query.category); conds.push(`category=$${params.length}`); }
+  if (req.query.q) { params.push(`%${req.query.q}%`); conds.push(`display_name ILIKE $${params.length}`); }
+  if (req.query.letter) { params.push(`${req.query.letter}%`); conds.push(`lower(display_name) LIKE lower($${params.length})`); }
+  const sql = `SELECT id, name, type, version, display_name, description, icon, spec, supported_sync_modes,
+                      category, badge, implemented, catalog_slug, docs_url
+               FROM connector_definitions ${conds.length ? 'WHERE ' + conds.join(' AND ') : ''}
+               ORDER BY implemented DESC, display_name`;
+  res.json(await db.many(sql, params));
+}));
+
+// catalog taxonomy for filter chips
+router.get('/connectors/meta/facets', asyncWrap(async (_req, res) => {
+  const rows = await db.many(
+    `SELECT type, category, COUNT(*) total, COUNT(*) FILTER (WHERE implemented) implemented
+     FROM connector_definitions GROUP BY 1,2 ORDER BY 1,2`);
+  res.json(rows);
 }));
 
 // ad-hoc check/discover against raw config (used by setup wizards before save)
@@ -68,6 +82,7 @@ function instanceRoutes(kind) {
     const { name, connector, config } = req.body || {};
     const def = await db.one('SELECT * FROM connector_definitions WHERE name=$1 AND type=$2', [connector, defType]);
     if (!def) throw new AppError(`unknown ${kind} connector: ${connector}`);
+    if (!def.implemented) throw new AppError(`"${def.display_name}" is listed in the catalog but has no implementation in this build`, 400);
     const check = await registry.get(connector).check(config || {});
     const row = await db.one(
       `INSERT INTO ${table} (name, connector_definition_id, config_encrypted, last_check_status, last_check_at, created_by)

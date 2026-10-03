@@ -1,0 +1,162 @@
+// Product analytics, identity, monitoring & platform specs.
+
+module.exports = [
+  {
+    name: 'source-mixpanel',
+    displayName: 'Mixpanel',
+    description: 'Events, profiles, cohorts and annotations.',
+    catalogSlug: 'mixpanel', category: 'Applications', icon: 'mixpanel',
+    baseUrl: 'https://mixpanel.com/api/2.0',
+    auth: { type: 'basic', username: '{serviceUser}', password: '{serviceSecret}' },
+    config: [
+      { key: 'serviceUser', title: 'Service account username', required: true },
+      { key: 'serviceSecret', title: 'Service account secret', secret: true, required: true },
+      { key: 'projectId', title: 'Project ID', required: true },
+    ],
+    check: { path: '/cohorts/list', params: { project_id: '{projectId}' } },
+    resources: [
+      { name: 'cohorts', path: '/cohorts/list', params: { project_id: '{projectId}' }, recordsPath: null, primaryKey: 'id' },
+      { name: 'profiles', path: '/engage', params: { project_id: '{projectId}' }, recordsPath: 'results', primaryKey: 'distinct_id', pagination: { type: 'cursor', cursorParam: 'session_id', cursorPath: 'session_id', limitParam: 'page_size', pageSize: 1000 } },
+      { name: 'annotations', path: '/annotations', params: { project_id: '{projectId}' }, recordsPath: 'annotations', primaryKey: 'id' },
+      { name: 'events', path: '/events/names', params: { project_id: '{projectId}', type: 'general' }, recordsPath: null, primaryKey: null },
+    ],
+  },
+
+  {
+    name: 'source-posthog',
+    displayName: 'PostHog',
+    description: 'Events, persons, cohorts, insights and feature flags.',
+    catalogSlug: 'posthog', category: 'Applications', icon: 'posthog',
+    baseUrl: 'https://{host}/api',
+    auth: { type: 'bearer' },
+    config: [
+      { key: 'host', title: 'Host', required: true, default: 'app.posthog.com', help: 'app.posthog.com or self-hosted domain (no scheme)' },
+      { key: 'projectId', title: 'Project ID', required: true },
+      { key: 'accessToken', title: 'Personal API key', secret: true, required: true },
+    ],
+    check: { path: '/projects/{projectId}' },
+    resources: [
+      { name: 'events', path: '/projects/{projectId}/events', recordsPath: 'results', primaryKey: 'id', cursorField: 'timestamp', filterClientSide: true, pagination: { type: 'link', nextUrlPath: 'next' } },
+      { name: 'persons', path: '/projects/{projectId}/persons', recordsPath: 'results', primaryKey: 'id', cursorField: 'created_at', filterClientSide: true, pagination: { type: 'link', nextUrlPath: 'next' } },
+      { name: 'cohorts', path: '/projects/{projectId}/cohorts', recordsPath: 'results', primaryKey: 'id', pagination: { type: 'link', nextUrlPath: 'next' } },
+      { name: 'insights', path: '/projects/{projectId}/insights', recordsPath: 'results', primaryKey: 'id', pagination: { type: 'link', nextUrlPath: 'next' } },
+      { name: 'feature_flags', path: '/projects/{projectId}/feature_flags', recordsPath: 'results', primaryKey: 'id', pagination: { type: 'link', nextUrlPath: 'next' } },
+      { name: 'annotations', path: '/projects/{projectId}/annotations', recordsPath: 'results', primaryKey: 'id' },
+    ],
+  },
+
+  {
+    name: 'source-okta',
+    displayName: 'Okta',
+    description: 'Users, groups, apps, logs and policy data.',
+    catalogSlug: 'okta', category: 'Applications', icon: 'okta',
+    baseUrl: 'https://{domain}',
+    auth: { type: 'raw_header', header: 'Authorization', value: 'SSWS {apiToken}' },
+    config: [
+      { key: 'domain', title: 'Okta domain', required: true, help: 'acme.okta.com' },
+      { key: 'apiToken', title: 'API token (SSWS)', secret: true, required: true },
+    ],
+    check: { path: '/api/v1/users/me' },
+    resources: [
+      { name: 'users', path: '/api/v1/users', params: { limit: 200 }, recordsPath: null, primaryKey: 'id', cursorField: 'lastUpdated', filterClientSide: true, pagination: { type: 'link', linkHeader: true } },
+      { name: 'groups', path: '/api/v1/groups', params: { limit: 200 }, recordsPath: null, primaryKey: 'id', cursorField: 'lastUpdated', filterClientSide: true, pagination: { type: 'link', linkHeader: true } },
+      { name: 'apps', path: '/api/v1/apps', params: { limit: 200 }, recordsPath: null, primaryKey: 'id', cursorField: 'lastUpdated', filterClientSide: true, pagination: { type: 'link', linkHeader: true } },
+      { name: 'logs', path: '/api/v1/logs', params: { limit: 500, sortOrder: 'ASCENDING' }, recordsPath: null, primaryKey: 'uuid', cursorField: 'published', incrementalParam: 'since', pagination: { type: 'link', linkHeader: true } },
+      { name: 'factors', path: '/api/v1/org/factors', recordsPath: null, primaryKey: 'id' },
+    ],
+  },
+
+  {
+    name: 'source-auth0',
+    displayName: 'Auth0',
+    description: 'Users, logs, clients, connections and roles.',
+    catalogSlug: 'auth0', category: 'Applications', icon: 'auth0',
+    baseUrl: 'https://{domain}/api/v2',
+    auth: { type: 'bearer' },
+    config: [
+      { key: 'domain', title: 'Tenant domain', required: true, help: 'acme.auth0.com' },
+      { key: 'accessToken', title: 'Management API token', secret: true, required: true },
+    ],
+    check: { path: '/users', params: { per_page: 1 } },
+    resources: [
+      { name: 'users', path: '/users', params: { include_totals: true }, recordsPath: 'users', primaryKey: 'user_id', cursorField: 'updated_at', filterClientSide: true, pagination: { type: 'page', pageParam: 'page', limitParam: 'per_page', pageSize: 100, totalPath: 'total' } },
+      { name: 'logs', path: '/logs', params: { include_totals: true }, recordsPath: 'logs', primaryKey: '_id', cursorField: 'date', filterClientSide: true, pagination: { type: 'page', pageParam: 'page', limitParam: 'per_page', pageSize: 100 } },
+      { name: 'clients', path: '/clients', params: { include_totals: true }, recordsPath: 'clients', primaryKey: 'client_id', pagination: { type: 'page', pageParam: 'page', limitParam: 'per_page', pageSize: 100 } },
+      { name: 'connections', path: '/connections', recordsPath: null, primaryKey: 'id' },
+      { name: 'roles', path: '/roles', recordsPath: null, primaryKey: 'id' },
+      { name: 'organizations', path: '/organizations', recordsPath: null, primaryKey: 'id' },
+    ],
+  },
+
+  {
+    name: 'source-statuspage',
+    displayName: 'Statuspage',
+    description: 'Pages, incidents, components and metrics.',
+    catalogSlug: 'statuspage', category: 'Applications', icon: 'statuspage',
+    baseUrl: 'https://api.statuspage.io/v1',
+    auth: { type: 'raw_header', header: 'Authorization', value: 'OAuth {apiKey}' },
+    config: [{ key: 'apiKey', title: 'API key', secret: true, required: true }],
+    check: { path: '/pages' },
+    resources: [
+      { name: 'pages', path: '/pages', recordsPath: null, primaryKey: 'id' },
+      { name: 'incidents', path: '/pages/{parentId}/incidents', recordsPath: null, primaryKey: 'id', cursorField: 'updated_at', filterClientSide: true, child: { parent: 'pages', path: (p) => `/pages/${p.id}/incidents` } },
+      { name: 'components', path: '/pages/{parentId}/components', recordsPath: null, primaryKey: 'id', child: { parent: 'pages', path: (p) => `/pages/${p.id}/components` } },
+      { name: 'subscribers', path: '/pages/{parentId}/subscribers', recordsPath: null, primaryKey: 'id', child: { parent: 'pages', path: (p) => `/pages/${p.id}/subscribers` } },
+    ],
+  },
+
+  {
+    name: 'source-launchdarkly',
+    displayName: 'LaunchDarkly',
+    description: 'Projects, environments, feature flags and members.',
+    catalogSlug: 'launchdarkly', category: 'Applications', icon: 'launchdarkly',
+    baseUrl: 'https://app.launchdarkly.com/api/v2',
+    auth: { type: 'token_header', header: 'Authorization' },
+    config: [{ key: 'accessToken', title: 'API access token', secret: true, required: true }],
+    check: { path: '/account' },
+    resources: [
+      { name: 'projects', path: '/projects', recordsPath: 'items', primaryKey: 'key', pagination: { type: 'link', nextUrlPath: '_links.next.href' } },
+      { name: 'environments', path: '/projects/{parentId}/environments', recordsPath: 'items', primaryKey: 'key', child: { parent: 'projects', path: (p) => `/projects/${p.key}/environments` } },
+      { name: 'feature_flags', path: '/flags/{parentId}', recordsPath: 'items', primaryKey: 'key', pagination: { type: 'link', nextUrlPath: '_links.next.href' }, child: { parent: 'projects', path: (p) => `/flags/${p.key}` } },
+      { name: 'members', path: '/members', recordsPath: 'items', primaryKey: '_id', pagination: { type: 'link', nextUrlPath: '_links.next.href' } },
+      { name: 'segments', path: '/segments/{parentId}/default', recordsPath: 'items', primaryKey: 'key', child: { parent: 'projects', path: (p) => `/segments/${p.key}/default` } },
+    ],
+  },
+
+  {
+    name: 'source-segment',
+    displayName: 'Segment',
+    description: 'Sources, destinations, warehouses and tracking plan data.',
+    catalogSlug: 'segment', category: 'Applications', icon: 'segment',
+    baseUrl: 'https://api.segmentapis.com',
+    auth: { type: 'bearer' },
+    headers: { 'Content-Type': 'application/json' },
+    config: [{ key: 'accessToken', title: 'Workspace API token', secret: true, required: true }],
+    check: { path: '/sources', params: { 'pagination.count': 1 } },
+    resources: [
+      { name: 'sources', path: '/sources', recordsPath: 'data.sources', primaryKey: 'id', pagination: { type: 'cursor', cursorParam: 'pagination.cursor', cursorPath: 'data.pagination.cursor' } },
+      { name: 'destinations', path: '/destinations', recordsPath: 'data.destinations', primaryKey: 'id', pagination: { type: 'cursor', cursorParam: 'pagination.cursor', cursorPath: 'data.pagination.cursor' } },
+      { name: 'warehouses', path: '/warehouses', recordsPath: 'data.warehouses', primaryKey: 'id', pagination: { type: 'cursor', cursorParam: 'pagination.cursor', cursorPath: 'data.pagination.cursor' } },
+      { name: 'catalog_sources', path: '/catalog/sources', recordsPath: 'data.catalog.sources', primaryKey: 'id', pagination: { type: 'cursor', cursorParam: 'pagination.cursor', cursorPath: 'data.pagination.cursor' } },
+      { name: 'spaces', path: '/spaces', recordsPath: 'data.spaces', primaryKey: 'id', pagination: { type: 'cursor', cursorParam: 'pagination.cursor', cursorPath: 'data.pagination.cursor' } },
+    ],
+  },
+
+  {
+    name: 'source-statsig',
+    displayName: 'Statsig',
+    description: 'Feature gates, dynamic configs, experiments and metrics.',
+    catalogSlug: 'statsig', category: 'Applications', icon: 'statsig',
+    baseUrl: 'https://statsigapi.net/console/v1',
+    auth: { type: 'token_header', header: 'STATSIG-API-KEY' },
+    config: [{ key: 'apiKey', title: 'Console API key', secret: true, required: true }],
+    check: { path: '/gates', params: { page: 1 } },
+    resources: [
+      { name: 'gates', path: '/gates', recordsPath: 'data', primaryKey: 'id', pagination: { type: 'page', pageParam: 'page', limitParam: 'itemsPerPage', pageSize: 100 } },
+      { name: 'dynamic_configs', path: '/dynamic_configs', recordsPath: 'data', primaryKey: 'id', pagination: { type: 'page', pageParam: 'page', limitParam: 'itemsPerPage', pageSize: 100 } },
+      { name: 'experiments', path: '/experiments', recordsPath: 'data', primaryKey: 'id', pagination: { type: 'page', pageParam: 'page', limitParam: 'itemsPerPage', pageSize: 100 } },
+      { name: 'metrics', path: '/metrics', recordsPath: 'data', primaryKey: 'id', pagination: { type: 'page', pageParam: 'page', limitParam: 'itemsPerPage', pageSize: 100 } },
+      { name: 'autotunes', path: '/autotunes', recordsPath: 'data', primaryKey: 'id' },
+    ],
+  },
+];

@@ -8,6 +8,9 @@ class MongodbSource extends BaseSource {
     this.displayName = 'MongoDB';
     this.description = 'Sync collections from MongoDB via full refresh or cursor-based incremental (_id or date fields).';
     this.icon = '🍃';
+    this.category = 'Databases';
+    this.catalogSlug = 'mongodb';
+    this.catalogName = 'MongoDB';
     this.supportedSyncModes = ['full_refresh', 'incremental'];
   }
 
@@ -96,3 +99,4 @@ function coerceCursor(v, field) {
 }
 
 module.exports = new MongodbSource();
+module.exports.MongodbSource = MongodbSource;

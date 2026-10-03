@@ -12,6 +12,8 @@ class WebhookSource extends BaseSource {
     this.displayName = 'Webhook';
     this.description = 'Receive push events via a generated webhook URL and sync them on schedule.';
     this.icon = '🪝';
+    this.category = 'Events';
+    this.catalogSlug = 'webhooks';
     this.supportedSyncModes = ['full_refresh', 'incremental'];
   }
 

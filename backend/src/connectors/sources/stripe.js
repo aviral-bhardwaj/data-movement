@@ -20,6 +20,8 @@ class StripeSource extends BaseSource {
     this.displayName = 'Stripe';
     this.description = 'Sync Stripe objects (customers, charges, invoices, subscriptions...) with incremental support on created timestamp.';
     this.icon = '💳';
+    this.category = 'Applications';
+    this.catalogSlug = 'stripe';
     this.supportedSyncModes = ['full_refresh', 'incremental'];
   }
 

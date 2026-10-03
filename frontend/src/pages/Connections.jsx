@@ -14,23 +14,23 @@ export default function Connections() {
 
   return (
     <div>
-      <div className="row" style={{ marginBottom: 16 }}>
-        <h1 style={{ margin: 0 }}>Connections</h1>
-        <button className="btn shrink" onClick={() => nav('/connections/new')}>+ New connection</button>
+      <div className="page-head">
+        <div><h1>Connections</h1><div className="sub">{rows.length} pipelines</div></div>
+        <button className="btn" onClick={() => nav('/app/connections/new')}>+ New connection</button>
       </div>
-      <div className="card">
+      <div className="card pad0">
         <table>
-          <thead><tr><th>Name</th><th>Pipeline</th><th>Schedule</th><th>Status</th><th>Last sync</th><th>Streams</th><th></th></tr></thead>
+          <thead><tr><th>Name</th><th>Pipeline</th><th>Schedule</th><th>Status</th><th>Last sync</th><th>Streams</th><th className="tr">Actions</th></tr></thead>
           <tbody>
             {rows.map((c) => (
               <tr key={c.id}>
-                <td><Link to={`/connections/${c.id}`}>{c.name}</Link></td>
+                <td><Link to={`/app/connections/${c.id}`}>{c.name}</Link></td>
                 <td><span className="conn-flow">{c.source_connector} <span className="arrow">→</span> {c.destination_connector}</span></td>
                 <td className="muted">{c.schedule_type}{c.schedule_value ? ` (${c.schedule_value})` : ''}</td>
                 <td><StatusBadge status={c.last_status || c.status} /></td>
                 <td className="muted">{c.last_finished ? new Date(c.last_finished).toLocaleString() : 'never'}</td>
                 <td>{c.catalog?.streams?.length ?? 0}</td>
-                <td style={{ whiteSpace: 'nowrap' }}>
+                <td className="tr nowrap">
                   <button className="btn small" onClick={() => act(c.id, 'sync')}>Sync now</button>{' '}
                   {c.status === 'active'
                     ? <button className="btn small secondary" onClick={() => act(c.id, 'pause')}>Pause</button>
@@ -39,7 +39,11 @@ export default function Connections() {
                 </td>
               </tr>
             ))}
-            {!rows.length && <tr><td colSpan={7} className="muted">No connections yet.</td></tr>}
+            {!rows.length && (
+              <tr><td colSpan={7}>
+                <div className="empty"><div className="glyph">⇄</div><h3>No connections yet</h3><p>Wire a source to a destination to start moving data.</p><button className="btn" onClick={() => nav('/app/connections/new')}>+ New connection</button></div>
+              </td></tr>
+            )}
           </tbody>
         </table>
       </div>

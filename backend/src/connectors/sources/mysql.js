@@ -8,6 +8,9 @@ class MysqlSource extends BaseSource {
     this.displayName = 'MySQL';
     this.description = 'Sync tables from MySQL via full refresh or cursor-based incremental.';
     this.icon = '🐬';
+    this.category = 'Databases';
+    this.catalogSlug = 'mysql';
+    this.catalogName = 'MySQL';
     this.supportedSyncModes = ['full_refresh', 'incremental'];
   }
 
@@ -134,3 +137,4 @@ function mysqlToJson(t) {
 }
 
 module.exports = new MysqlSource();
+module.exports.MysqlSource = MysqlSource;

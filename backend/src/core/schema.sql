@@ -34,8 +34,21 @@ CREATE TABLE IF NOT EXISTS connector_definitions (
   icon TEXT,
   spec JSONB NOT NULL,                  -- connection spec (JSON Schema)
   supported_sync_modes TEXT[] NOT NULL DEFAULT '{}',
+  category TEXT,                        -- Applications | Databases | Events | Files | Functions | Logs
+  badge TEXT,                           -- Lite | Beta | Partner-Built | Connector SDK | Private Preview
+  implemented BOOLEAN NOT NULL DEFAULT true, -- false = catalog-only entry
+  catalog_slug TEXT,                    -- fivetran-style slug, for catalog de-duplication
+  docs_url TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+ALTER TABLE connector_definitions ADD COLUMN IF NOT EXISTS category TEXT;
+ALTER TABLE connector_definitions ADD COLUMN IF NOT EXISTS badge TEXT;
+ALTER TABLE connector_definitions ADD COLUMN IF NOT EXISTS implemented BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE connector_definitions ADD COLUMN IF NOT EXISTS catalog_slug TEXT;
+ALTER TABLE connector_definitions ADD COLUMN IF NOT EXISTS docs_url TEXT;
+CREATE UNIQUE INDEX IF NOT EXISTS ux_conn_defs_catalog
+  ON connector_definitions(type, catalog_slug, display_name) WHERE catalog_slug IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_conn_defs_cat ON connector_definitions(type, category);
 
 CREATE TABLE IF NOT EXISTS sources (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

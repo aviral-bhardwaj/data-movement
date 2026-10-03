@@ -10,6 +10,8 @@ class BigQueryDestination extends BaseDestination {
     this.displayName = 'BigQuery';
     this.description = 'Stream rows into Google BigQuery tables with auto schema. Requires @google-cloud/bigquery.';
     this.icon = '📊';
+    this.category = 'Warehouse';
+    this.catalogSlug = 'bigquery';
   }
 
   spec() {

@@ -1,0 +1,368 @@
+// Engineering, devtools & project management specs.
+
+module.exports = [
+  {
+    name: 'source-github',
+    displayName: 'GitHub',
+    description: 'Issues, pull requests, commits, releases and repository metadata.',
+    catalogSlug: 'github', category: 'Applications', icon: 'github',
+    baseUrl: 'https://api.github.com',
+    auth: { type: 'bearer' },
+    headers: { 'X-GitHub-Api-Version': '2022-11-28' },
+    config: [
+      { key: 'accessToken', title: 'Personal access token', secret: true, required: true },
+      { key: 'owner', title: 'Owner (org or user)', required: true },
+      { key: 'repo', title: 'Repository', required: true },
+    ],
+    check: { path: '/repos/{owner}/{repo}' },
+    rateLimit: { minIntervalMs: 200 },
+    resources: [
+      { name: 'issues', path: '/repos/{owner}/{repo}/issues', params: { state: 'all' }, recordsPath: null, primaryKey: 'id', cursorField: 'updated_at', incrementalParam: 'since', pagination: { type: 'page', pageParam: 'page', limitParam: 'per_page', pageSize: 100 } },
+      { name: 'pull_requests', path: '/repos/{owner}/{repo}/pulls', params: { state: 'all' }, recordsPath: null, primaryKey: 'id', cursorField: 'updated_at', filterClientSide: true, pagination: { type: 'page', pageParam: 'page', limitParam: 'per_page', pageSize: 100 } },
+      { name: 'commits', path: '/repos/{owner}/{repo}/commits', recordsPath: null, primaryKey: 'sha', cursorField: 'commit.committer.date', incrementalParam: 'since', pagination: { type: 'page', pageParam: 'page', limitParam: 'per_page', pageSize: 100 } },
+      { name: 'releases', path: '/repos/{owner}/{repo}/releases', recordsPath: null, primaryKey: 'id', cursorField: 'published_at', filterClientSide: true, pagination: { type: 'page', pageParam: 'page', limitParam: 'per_page', pageSize: 100 } },
+      { name: 'branches', path: '/repos/{owner}/{repo}/branches', recordsPath: null, primaryKey: 'name', pagination: { type: 'page', pageParam: 'page', limitParam: 'per_page', pageSize: 100 } },
+      { name: 'contributors', path: '/repos/{owner}/{repo}/contributors', recordsPath: null, primaryKey: 'id', pagination: { type: 'page', pageParam: 'page', limitParam: 'per_page', pageSize: 100 } },
+      { name: 'workflows', path: '/repos/{owner}/{repo}/actions/workflows', recordsPath: 'workflows', primaryKey: 'id', pagination: { type: 'page', pageParam: 'page', limitParam: 'per_page', pageSize: 100 } },
+      { name: 'workflow_runs', path: '/repos/{owner}/{repo}/actions/runs', recordsPath: 'workflow_runs', primaryKey: 'id', cursorField: 'updated_at', filterClientSide: true, pagination: { type: 'page', pageParam: 'page', limitParam: 'per_page', pageSize: 100 } },
+    ],
+  },
+
+  {
+    name: 'source-gitlab',
+    displayName: 'GitLab',
+    description: 'Projects, issues, merge requests, commits and pipelines.',
+    catalogSlug: 'gitlab', category: 'Applications', icon: 'gitlab',
+    baseUrl: '{host}',
+    auth: { type: 'token_header', header: 'PRIVATE-TOKEN' },
+    config: [
+      { key: 'host', title: 'GitLab host', required: true, default: 'https://gitlab.com/api/v4' },
+      { key: 'accessToken', title: 'Personal access token', secret: true, required: true },
+    ],
+    check: { path: '/user' },
+    resources: [
+      { name: 'projects', path: '/projects', params: { membership: true, order_by: 'updated_at' }, recordsPath: null, primaryKey: 'id', cursorField: 'updated_at', filterClientSide: true, pagination: { type: 'page', pageParam: 'page', limitParam: 'per_page', pageSize: 100 } },
+      { name: 'issues', path: '/issues', params: { scope: 'all', order_by: 'updated_at' }, recordsPath: null, primaryKey: 'id', cursorField: 'updated_at', incrementalParam: 'updated_after', pagination: { type: 'page', pageParam: 'page', limitParam: 'per_page', pageSize: 100 } },
+      { name: 'merge_requests', path: '/merge_requests', params: { scope: 'all', order_by: 'updated_at' }, recordsPath: null, primaryKey: 'id', cursorField: 'updated_at', incrementalParam: 'updated_after', pagination: { type: 'page', pageParam: 'page', limitParam: 'per_page', pageSize: 100 } },
+      { name: 'groups', path: '/groups', recordsPath: null, primaryKey: 'id', pagination: { type: 'page', pageParam: 'page', limitParam: 'per_page', pageSize: 100 } },
+      { name: 'commits', path: '/projects/{parentId}/repository/commits', recordsPath: null, primaryKey: 'id', cursorField: 'committed_date', child: { parent: 'projects', path: (p) => `/projects/${p.id}/repository/commits` } },
+      { name: 'pipelines', path: '/projects/{parentId}/pipelines', recordsPath: null, primaryKey: 'id', cursorField: 'updated_at', child: { parent: 'projects', path: (p) => `/projects/${p.id}/pipelines` } },
+    ],
+  },
+
+  {
+    name: 'source-jira',
+    displayName: 'Jira',
+    description: 'Issues, projects, users, sprints and boards.',
+    catalogSlug: 'jira', category: 'Applications', icon: 'jira',
+    baseUrl: 'https://{site}.atlassian.net/rest/api/3',
+    auth: { type: 'basic', username: '{email}', password: '{apiToken}' },
+    config: [
+      { key: 'site', title: 'Site', required: true, help: 'acme in acme.atlassian.net' },
+      { key: 'email', title: 'Account email', required: true },
+      { key: 'apiToken', title: 'API token', secret: true, required: true },
+    ],
+    check: { path: '/myself' },
+    resources: [
+      { name: 'issues', path: '/search/jql', params: { jql: 'ORDER BY updated ASC', fields: '*all' }, recordsPath: 'issues', primaryKey: 'id', cursorField: 'fields.updated', filterClientSide: true, pagination: { type: 'offset', offsetParam: 'nextPageToken', limitParam: 'maxResults', pageSize: 100 } },
+      { name: 'projects', path: '/project/search', recordsPath: 'values', primaryKey: 'id', cursorField: 'lastIssueUpdateTime', filterClientSide: true, pagination: { type: 'offset', offsetParam: 'startAt', limitParam: 'maxResults', pageSize: 50, totalPath: 'total' } },
+      { name: 'users', path: '/users/search', recordsPath: null, primaryKey: 'accountId', pagination: { type: 'offset', offsetParam: 'startAt', limitParam: 'maxResults', pageSize: 50 } },
+      { name: 'boards', path: '/rest/agile/1.0/board', recordsPath: 'values', primaryKey: 'id', pagination: { type: 'offset', offsetParam: 'startAt', limitParam: 'maxResults', pageSize: 50, totalPath: 'total' } },
+      { name: 'sprints', path: '/rest/agile/1.0/board/{parentId}/sprint', recordsPath: 'values', primaryKey: 'id', pagination: { type: 'offset', offsetParam: 'startAt', limitParam: 'maxResults', pageSize: 50 }, child: { parent: 'boards', path: (p) => `/rest/agile/1.0/board/${p.id}/sprint` } },
+    ],
+  },
+
+  {
+    name: 'source-linear',
+    displayName: 'Linear',
+    description: 'Issues, projects, teams and cycles via the GraphQL API.',
+    catalogSlug: 'linear', category: 'Applications', icon: 'linear',
+    baseUrl: 'https://api.linear.app',
+    auth: { type: 'token_header', header: 'Authorization' },
+    config: [{ key: 'apiKey', title: 'API key', secret: true, required: true }],
+    check: { path: '/graphql', method: 'POST' },
+    resources: [
+      {
+        name: 'issues', path: '/graphql', method: 'POST',
+        body: (cfg, ctx) => ({
+          query: `query($after:String){ issues(first:100, after:$after){ nodes{ id identifier title description state{ name } priority createdAt updatedAt assignee{ email } team{ name } labels{ nodes{ name } } } pageInfo{ endCursor hasNextPage } } }`,
+          variables: { after: ctx.cursor || undefined },
+        }),
+        recordsPath: 'data.issues.nodes', primaryKey: 'id', cursorField: 'updatedAt', filterClientSide: true,
+        pagination: { type: 'cursor', cursorPath: 'data.issues.pageInfo.endCursor' },
+        map: (r) => ({ ...r, state: r.state?.name, assignee: r.assignee?.email, team: r.team?.name, labels: r.labels?.nodes?.map((l) => l.name) }),
+      },
+      {
+        name: 'projects', path: '/graphql', method: 'POST',
+        body: (cfg, ctx) => ({ query: `query($after:String){ projects(first:100, after:$after){ nodes{ id name description state progress createdAt updatedAt } pageInfo{ endCursor hasNextPage } } }`, variables: { after: ctx.cursor || undefined } }),
+        recordsPath: 'data.projects.nodes', primaryKey: 'id', cursorField: 'updatedAt', filterClientSide: true,
+        pagination: { type: 'cursor', cursorPath: 'data.projects.pageInfo.endCursor' },
+      },
+      {
+        name: 'teams', path: '/graphql', method: 'POST',
+        body: () => ({ query: `{ teams{ nodes{ id name key description } } }` }),
+        recordsPath: 'data.teams.nodes', primaryKey: 'id',
+      },
+      {
+        name: 'cycles', path: '/graphql', method: 'POST',
+        body: (cfg, ctx) => ({ query: `query($after:String){ cycles(first:100, after:$after){ nodes{ id number name startsAt endsAt progress team{ name } } } pageInfo{ endCursor hasNextPage } } }`, variables: { after: ctx.cursor || undefined } }),
+        recordsPath: 'data.cycles.nodes', primaryKey: 'id',
+        pagination: { type: 'cursor', cursorPath: 'data.cycles.pageInfo.endCursor' },
+        map: (r) => ({ ...r, team: r.team?.name }),
+      },
+    ],
+  },
+  // NOTE: linear cursor goes through GraphQL variables via body fn (ctx.cursor) — pagination place is body.
+
+  {
+    name: 'source-asana',
+    displayName: 'Asana',
+    description: 'Workspaces, projects, tasks, users and teams.',
+    catalogSlug: 'asana', category: 'Applications', icon: 'asana',
+    baseUrl: 'https://app.asana.com/api/1.0',
+    auth: { type: 'bearer' },
+    config: [{ key: 'accessToken', title: 'Personal access token', secret: true, required: true }],
+    check: { path: '/users/me' },
+    resources: [
+      { name: 'workspaces', path: '/workspaces', recordsPath: 'data', primaryKey: 'gid', pagination: { type: 'cursor', cursorParam: 'offset', cursorPath: 'next_page.offset', limitParam: 'limit', pageSize: 100 } },
+      { name: 'projects', path: '/projects', params: { archived: false }, recordsPath: 'data', primaryKey: 'gid', cursorField: 'modified_at', filterClientSide: true, pagination: { type: 'cursor', cursorParam: 'offset', cursorPath: 'next_page.offset', limitParam: 'limit', pageSize: 100 } },
+      { name: 'tasks', path: '/tasks', params: { project: '{projectGid}' }, recordsPath: 'data', primaryKey: 'gid', cursorField: 'modified_at', filterClientSide: true, pagination: { type: 'cursor', cursorParam: 'offset', cursorPath: 'next_page.offset', limitParam: 'limit', pageSize: 100 } },
+      { name: 'users', path: '/users', recordsPath: 'data', primaryKey: 'gid', pagination: { type: 'cursor', cursorParam: 'offset', cursorPath: 'next_page.offset', limitParam: 'limit', pageSize: 100 } },
+      { name: 'teams', path: '/teams', params: { organization: '{workspaceGid}' }, recordsPath: 'data', primaryKey: 'gid', pagination: { type: 'cursor', cursorParam: 'offset', cursorPath: 'next_page.offset', limitParam: 'limit', pageSize: 100 } },
+    ],
+    // projectGid / workspaceGid are optional config fields
+    extraConfig: [
+      { key: 'projectGid', title: 'Project GID (for tasks stream)' },
+      { key: 'workspaceGid', title: 'Workspace/Org GID (for teams stream)' },
+    ],
+  },
+
+  {
+    name: 'source-trello',
+    displayName: 'Trello',
+    description: 'Boards, lists, cards, members and actions.',
+    catalogSlug: 'trello', category: 'Applications', icon: 'trello',
+    baseUrl: 'https://api.trello.com/1',
+    auth: { type: 'query', params: { key: '{key}', token: '{token}' } },
+    config: [
+      { key: 'key', title: 'API key', required: true },
+      { key: 'token', title: 'Token', secret: true, required: true },
+    ],
+    check: { path: '/members/me' },
+    resources: [
+      { name: 'boards', path: '/members/me/boards', recordsPath: null, primaryKey: 'id', cursorField: 'dateLastActivity', filterClientSide: true },
+      { name: 'lists', path: '/boards/{parentId}/lists', recordsPath: null, primaryKey: 'id', child: { parent: 'boards', path: (p) => `/boards/${p.id}/lists` } },
+      { name: 'cards', path: '/boards/{parentId}/cards', recordsPath: null, primaryKey: 'id', cursorField: 'dateLastActivity', filterClientSide: true, child: { parent: 'boards', path: (p) => `/boards/${p.id}/cards` } },
+      { name: 'actions', path: '/boards/{parentId}/actions', recordsPath: null, primaryKey: 'id', cursorField: 'date', filterClientSide: true, child: { parent: 'boards', path: (p) => `/boards/${p.id}/actions`, limit: 1000 } },
+      { name: 'members', path: '/boards/{parentId}/members', recordsPath: null, primaryKey: 'id', child: { parent: 'boards', path: (p) => `/boards/${p.id}/members` } },
+    ],
+  },
+
+  {
+    name: 'source-clickup',
+    displayName: 'ClickUp',
+    description: 'Teams, spaces, folders, lists and tasks.',
+    catalogSlug: 'clickup', category: 'Applications', icon: 'clickup',
+    baseUrl: 'https://api.clickup.com/api/v2',
+    auth: { type: 'token_header', header: 'Authorization' },
+    config: [{ key: 'accessToken', title: 'Personal API token', secret: true, required: true }],
+    check: { path: '/user' },
+    resources: [
+      { name: 'teams', path: '/team', recordsPath: 'teams', primaryKey: 'id' },
+      { name: 'spaces', path: '/team/{parentId}/space', recordsPath: 'spaces', primaryKey: 'id', child: { parent: 'teams', path: (p) => `/team/${p.id}/space` } },
+      { name: 'tasks', path: '/team/{parentId}/task', params: { include_closed: true, order_by: 'updated' }, recordsPath: 'tasks', primaryKey: 'id', cursorField: 'date_updated', filterClientSide: true, pagination: { type: 'page', pageParam: 'page', limitParam: 'subtasks', pageSize: 100000 }, child: { parent: 'teams', path: (p) => `/team/${p.id}/task` } },
+    ],
+  },
+
+  {
+    name: 'source-monday',
+    displayName: 'Monday.com',
+    description: 'Boards, items, users and workspaces via GraphQL.',
+    catalogSlug: 'monday.com', category: 'Applications', icon: 'monday',
+    baseUrl: 'https://api.monday.com/v2',
+    auth: { type: 'token_header', header: 'Authorization' },
+    config: [{ key: 'accessToken', title: 'API token', secret: true, required: true }],
+    check: { path: '', method: 'POST' },
+    resources: [
+      {
+        name: 'boards', path: '', method: 'POST',
+        body: () => ({ query: `{ boards(limit:100){ id name state board_kind workspace{ id name } items_count } }` }),
+        recordsPath: 'data.boards', primaryKey: 'id',
+        map: (r) => ({ ...r, workspace: r.workspace?.name }),
+      },
+      {
+        name: 'items', path: '', method: 'POST',
+        body: () => ({ query: `{ items_page_by_column_values(limit:100, board_id:0, columns:[]){ cursor items{ id name created_at updated_at } } }` }),
+        recordsPath: 'data.items_page_by_column_values.items', primaryKey: 'id',
+      },
+      {
+        name: 'users', path: '', method: 'POST',
+        body: () => ({ query: `{ users{ id name email title is_admin is_guest created_at } }` }),
+        recordsPath: 'data.users', primaryKey: 'id',
+      },
+      {
+        name: 'workspaces', path: '', method: 'POST',
+        body: () => ({ query: `{ workspaces{ id name kind description } }` }),
+        recordsPath: 'data.workspaces', primaryKey: 'id',
+      },
+    ],
+  },
+
+  {
+    name: 'source-notion',
+    displayName: 'Notion',
+    description: 'Pages, databases, users and comments.',
+    catalogSlug: 'notion', category: 'Applications', icon: 'notion',
+    baseUrl: 'https://api.notion.com/v1',
+    auth: { type: 'bearer' },
+    headers: { 'Notion-Version': '2022-06-28' },
+    config: [{ key: 'accessToken', title: 'Integration token', secret: true, required: true }],
+    check: { path: '/users/me' },
+    resources: [
+      { name: 'search', path: '/search', method: 'POST', body: { page_size: 100 }, recordsPath: 'results', primaryKey: 'id', cursorField: 'last_edited_time', filterClientSide: true, pagination: { type: 'cursor', place: 'body', cursorParam: 'start_cursor', cursorPath: 'next_cursor' } },
+      { name: 'users', path: '/users', recordsPath: 'results', primaryKey: 'id', pagination: { type: 'cursor', cursorParam: 'start_cursor', cursorPath: 'next_cursor' } },
+      { name: 'blocks', path: '/blocks/{parentId}/children', recordsPath: 'results', primaryKey: 'id', child: { parent: 'search', path: (p) => `/blocks/${p.id}/children` } },
+    ],
+  },
+
+  {
+    name: 'source-airtable',
+    displayName: 'Airtable',
+    description: 'Records from configured tables in a base.',
+    catalogSlug: 'airtable', category: 'Applications', icon: 'airtable',
+    baseUrl: 'https://api.airtable.com/v0/{baseId}',
+    auth: { type: 'bearer' },
+    config: [
+      { key: 'accessToken', title: 'Personal access token', secret: true, required: true },
+      { key: 'baseId', title: 'Base ID', required: true, help: 'appXXXXXXXXXXXXXX' },
+      { key: 'tables', title: 'Tables (comma-separated)', required: true },
+    ],
+    check: { path: '/meta/whoami' },
+    resources: (cfg) => String(cfg.tables || '').split(',').map((t) => t.trim()).filter(Boolean).map((t) => ({
+      name: t.toLowerCase().replace(/[^a-z0-9]+/g, '_'),
+      path: `/${t}`,
+      recordsPath: 'records',
+      primaryKey: 'id',
+      cursorField: 'createdTime',
+      filterClientSide: true,
+      pagination: { type: 'cursor', cursorParam: 'offset', cursorPath: 'offset', limitParam: 'pageSize', pageSize: 100 },
+    })),
+  },
+
+  {
+    name: 'source-sentry',
+    displayName: 'Sentry',
+    description: 'Organizations, projects, teams, members and issue events.',
+    catalogSlug: 'sentry', category: 'Applications', icon: 'sentry',
+    baseUrl: 'https://sentry.io/api/0',
+    auth: { type: 'bearer' },
+    config: [{ key: 'accessToken', title: 'Auth token', secret: true, required: true }],
+    check: { path: '/' },
+    resources: [
+      { name: 'organizations', path: '/organizations/', recordsPath: null, primaryKey: 'slug' },
+      { name: 'projects', path: '/projects/', recordsPath: null, primaryKey: 'id' },
+      { name: 'teams', path: '/organizations/{orgSlug}/teams/', recordsPath: null, primaryKey: 'id' },
+      { name: 'members', path: '/organizations/{orgSlug}/members/', recordsPath: null, primaryKey: 'id' },
+      { name: 'issues', path: '/projects/{parentId}/issues/', recordsPath: null, primaryKey: 'id', cursorField: 'lastSeen', filterClientSide: true, child: { parent: 'projects', path: (p) => `/projects/${p.organization?.slug || p.orgSlug || 'sentry'}/${p.slug}/issues/` } },
+    ],
+  },
+
+  {
+    name: 'source-circleci',
+    displayName: 'CircleCI',
+    description: 'Pipelines, workflows, jobs and project metadata.',
+    catalogSlug: 'circleci', category: 'Applications', icon: 'circleci',
+    baseUrl: 'https://circleci.com/api/v2',
+    auth: { type: 'token_header', header: 'Circle-Token' },
+    config: [
+      { key: 'accessToken', title: 'Personal API token', secret: true, required: true },
+      { key: 'projectSlug', title: 'Project slug', help: 'gh/acme/repo' },
+    ],
+    check: { path: '/me' },
+    resources: [
+      { name: 'me', path: '/me', recordsPath: null, primaryKey: 'id' },
+      { name: 'pipelines', path: '/project/{projectSlug}/pipeline', recordsPath: 'items', primaryKey: 'id', cursorField: 'updated_at', filterClientSide: true, pagination: { type: 'cursor', cursorParam: 'page-token', cursorPath: 'next_page_token' } },
+      { name: 'projects', path: '/projects', recordsPath: 'items', primaryKey: 'slug', pagination: { type: 'cursor', cursorParam: 'page-token', cursorPath: 'next_page_token' } },
+    ],
+  },
+
+  {
+    name: 'source-buildkite',
+    displayName: 'Buildkite',
+    description: 'Organizations, pipelines, builds and agents.',
+    catalogSlug: 'buildkite', category: 'Applications', icon: 'buildkite',
+    baseUrl: 'https://api.buildkite.com/v2',
+    auth: { type: 'bearer' },
+    config: [
+      { key: 'accessToken', title: 'API access token', secret: true, required: true },
+      { key: 'org', title: 'Organization slug', required: true },
+    ],
+    check: { path: '/user' },
+    resources: [
+      { name: 'organizations', path: '/organizations', recordsPath: null, primaryKey: 'id' },
+      { name: 'pipelines', path: '/organizations/{org}/pipelines', recordsPath: null, primaryKey: 'id', pagination: { type: 'link', linkHeader: true } },
+      { name: 'builds', path: '/organizations/{org}/builds', recordsPath: null, primaryKey: 'id', cursorField: 'created_at', filterClientSide: true, pagination: { type: 'link', linkHeader: true } },
+      { name: 'agents', path: '/organizations/{org}/agents', recordsPath: null, primaryKey: 'id', pagination: { type: 'link', linkHeader: true } },
+    ],
+  },
+
+  {
+    name: 'source-pagerduty',
+    displayName: 'PagerDuty',
+    description: 'Incidents, services, users, schedules and on-calls.',
+    catalogSlug: 'pagerduty', category: 'Applications', icon: 'pagerduty',
+    baseUrl: 'https://api.pagerduty.com',
+    auth: { type: 'raw_header', header: 'Authorization', value: 'Token token={apiKey}' },
+    config: [{ key: 'apiKey', title: 'API key', secret: true, required: true }],
+    check: { path: '/users/me' },
+    resources: [
+      { name: 'incidents', path: '/incidents', recordsPath: 'incidents', primaryKey: 'id', cursorField: 'updated_at', incrementalParam: 'since', pagination: { type: 'offset', offsetParam: 'offset', limitParam: 'limit', pageSize: 100, totalPath: 'more' } },
+      { name: 'services', path: '/services', recordsPath: 'services', primaryKey: 'id', pagination: { type: 'offset', offsetParam: 'offset', limitParam: 'limit', pageSize: 100, totalPath: 'more' } },
+      { name: 'users', path: '/users', recordsPath: 'users', primaryKey: 'id', pagination: { type: 'offset', offsetParam: 'offset', limitParam: 'limit', pageSize: 100, totalPath: 'more' } },
+      { name: 'schedules', path: '/schedules', recordsPath: 'schedules', primaryKey: 'id', pagination: { type: 'offset', offsetParam: 'offset', limitParam: 'limit', pageSize: 100, totalPath: 'more' } },
+      { name: 'escalation_policies', path: '/escalation_policies', recordsPath: 'escalation_policies', primaryKey: 'id', pagination: { type: 'offset', offsetParam: 'offset', limitParam: 'limit', pageSize: 100, totalPath: 'more' } },
+      { name: 'oncalls', path: '/oncalls', recordsPath: 'oncalls', primaryKey: 'id', pagination: { type: 'offset', offsetParam: 'offset', limitParam: 'limit', pageSize: 100, totalPath: 'more' } },
+    ],
+  },
+
+  {
+    name: 'source-shortcut',
+    displayName: 'Shortcut',
+    description: 'Stories, epics, projects, members and workflows.',
+    catalogSlug: 'shortcut', category: 'Applications', icon: 'shortcut',
+    baseUrl: 'https://api.app.shortcut.com/api/v3',
+    auth: { type: 'token_header', header: 'Shortcut-Token' },
+    config: [{ key: 'apiKey', title: 'API token', secret: true, required: true }],
+    check: { path: '/member' },
+    resources: ['categories', 'epics', 'groups', 'labels', 'members', 'milestones', 'projects', 'teams', 'workflows'].map((r) => ({
+      name: r, path: `/${r}`, recordsPath: null, primaryKey: 'id',
+    })),
+    extraResources: [
+      { name: 'stories', path: '/search/stories', method: 'POST', body: { page_size: 250, detail: 'full' }, recordsPath: 'data', primaryKey: 'id', cursorField: 'updated_at', filterClientSide: true, pagination: { type: 'cursor', cursorParam: 'next', cursorPath: 'next' } },
+    ],
+  },
+
+  {
+    name: 'source-datadog',
+    displayName: 'Datadog',
+    description: 'Monitors, dashboards, hosts, users and metrics metadata.',
+    catalogSlug: 'datadog', category: 'Applications', icon: 'datadog',
+    baseUrl: 'https://api.{site}',
+    auth: { type: 'none' },
+    headers: { 'DD-API-KEY': '{apiKey}', 'DD-APPLICATION-KEY': '{appKey}' },
+    config: [
+      { key: 'site', title: 'Datadog site', required: true, default: 'datadoghq.com', help: 'e.g. datadoghq.com, us5.datadoghq.com, datadoghq.eu' },
+      { key: 'apiKey', title: 'API key', secret: true, required: true },
+      { key: 'appKey', title: 'Application key', secret: true, required: true },
+    ],
+    check: { path: '/api/v1/validate' },
+    resources: [
+      { name: 'monitors', path: '/api/v1/monitor', recordsPath: null, primaryKey: 'id', cursorField: 'modified', filterClientSide: true },
+      { name: 'dashboards', path: '/api/v1/dashboard', recordsPath: 'dashboards', primaryKey: 'id' },
+      { name: 'hosts', path: '/api/v1/hosts', recordsPath: 'host_list', primaryKey: 'id' },
+      { name: 'users', path: '/api/v2/users', recordsPath: 'data', primaryKey: 'id', pagination: { type: 'page', pageParam: 'page[number]', limitParam: 'page[size]', pageSize: 100 } },
+      { name: 'roles', path: '/api/v2/roles', recordsPath: 'data', primaryKey: 'id' },
+      { name: 'downtimes', path: '/api/v1/downtime', recordsPath: null, primaryKey: 'id' },
+    ],
+  },
+];

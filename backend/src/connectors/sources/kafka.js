@@ -9,6 +9,8 @@ class KafkaSource extends BaseSource {
     this.displayName = 'Kafka';
     this.description = 'Consume messages from Kafka topics. JSON payloads become records.';
     this.icon = '📨';
+    this.category = 'Events';
+    this.catalogSlug = 'apache-kafka';
     this.supportedSyncModes = ['full_refresh'];
   }
 

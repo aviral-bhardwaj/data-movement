@@ -10,21 +10,23 @@ export default function Syncs() {
 
   return (
     <div>
-      <h1>Sync jobs</h1>
-      <div className="card">
+      <div className="page-head">
+        <div><h1>Sync jobs</h1><div className="sub">All pipeline runs · auto-refreshing</div></div>
+      </div>
+      <div className="card pad0">
         <table>
-          <thead><tr><th>Job</th><th>Connection</th><th>Status</th><th>Trigger</th><th>Worker</th><th>Read</th><th>Written</th><th>Failed</th><th>Created</th><th></th></tr></thead>
+          <thead><tr><th>Job</th><th>Connection</th><th>Status</th><th>Trigger</th><th>Worker</th><th className="tr">Read</th><th className="tr">Written</th><th className="tr">Failed</th><th>Created</th><th></th></tr></thead>
           <tbody>
             {rows.map((j) => (
               <tr key={j.id}>
                 <td className="muted">{j.id.slice(0, 8)}</td>
-                <td><Link to={`/connections/${j.connection_id}`}>{j.connection_name}</Link></td>
+                <td><Link to={`/app/connections/${j.connection_id}`}>{j.connection_name}</Link></td>
                 <td><StatusBadge status={j.status} /></td>
-                <td>{j.trigger_type}</td>
+                <td className="muted">{j.trigger_type}</td>
                 <td className="muted">{j.worker_id || '—'}</td>
-                <td>{Number(j.records_read).toLocaleString()}</td>
-                <td>{Number(j.records_written).toLocaleString()}</td>
-                <td>{j.records_failed > 0 ? <span style={{ color: 'var(--err)' }}>{j.records_failed}</span> : 0}</td>
+                <td className="tr">{Number(j.records_read).toLocaleString()}</td>
+                <td className="tr">{Number(j.records_written).toLocaleString()}</td>
+                <td className="tr">{j.records_failed > 0 ? <span style={{ color: 'var(--err)' }}>{j.records_failed}</span> : 0}</td>
                 <td className="muted">{new Date(j.created_at).toLocaleString()}</td>
                 <td>{['queued', 'running'].includes(j.status) && (
                   <button className="btn small danger" onClick={async () => { await api.post(`/syncs/${j.id}/cancel`); load(); }}>Cancel</button>

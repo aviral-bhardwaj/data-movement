@@ -12,6 +12,8 @@ class FileSource extends BaseSource {
     this.displayName = 'File (CSV/JSON)';
     this.description = 'Read CSV, JSON or JSONL files from disk or HTTP URLs. Each file becomes a stream.';
     this.icon = '📄';
+    this.category = 'Files';
+    this.catalogSlug = 'local-file-system';
     this.supportedSyncModes = ['full_refresh', 'incremental'];
   }
 

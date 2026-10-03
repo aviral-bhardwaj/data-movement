@@ -128,3 +128,33 @@ c.check({apiKey:'…'}).then(console.log);
 "
 # then register via UI/API and run a real sync.
 ```
+
+## Declarative REST specs (`_specd`)
+
+For REST APIs, you usually don't need a code connector at all — drop a spec object into
+`backend/src/connectors/sources/_specd/<family>.js`. The shared engine
+(`_specd/engine.js`) turns it into a full connector:
+
+```js
+{
+  name: 'source-acme', displayName: 'Acme', catalogSlug: 'acme',
+  baseUrl: 'https://api.acme.com/v1',
+  auth: { type: 'bearer' },                 // bearer | basic | api_key | query | token_header | raw_header | oauth2_cc | none
+  config: [{ key: 'accessToken', required: true, secret: true }],
+  check: { path: '/me' },                    // 2xx => SUCCEEDED
+  resources: [{
+    name: 'items', path: '/items',
+    recordsPath: 'data.items',               // dot-path into response (null = root array)
+    primaryKey: 'id', cursorField: 'updated_at',
+    incrementalParam: 'since',               // sent as ?since=<cursor>
+    pagination: { type: 'cursor', cursorParam: 'after', cursorPath: 'data.next' },
+    child: { parent: 'items', path: (p) => `/items/${p.id}/parts` },  // N-level nesting OK
+    map: (row) => row,                        // transform/drop rows (return null to drop)
+  }],
+}
+```
+
+Pagination types: `offset` (incl. `totalPath`), `page`, `cursor` (with `place: 'body'` +
+`continuePath` for APIs like Dropbox), and `link` (relative/absolute next URLs, RFC-5988
+Link headers via `linkHeader: true`). Requests can use `body` (object or `(cfg, ctx) => obj`),
+function `params`, and `{placeholder}` interpolation from config.

@@ -1,0 +1,126 @@
+// Customer support & success specs.
+
+module.exports = [
+  {
+    name: 'source-zendesk',
+    displayName: 'Zendesk Support',
+    description: 'Tickets, users, organizations, comments and satisfaction ratings.',
+    catalogSlug: 'zendesk', catalogName: 'Zendesk Support', category: 'Applications', icon: 'zendesk',
+    baseUrl: 'https://{subdomain}.zendesk.com/api/v2',
+    auth: { type: 'basic', username: '{email}/token', password: '{apiToken}' },
+    config: [
+      { key: 'subdomain', title: 'Subdomain', required: true, help: 'acme in acme.zendesk.com' },
+      { key: 'email', title: 'Agent email', required: true },
+      { key: 'apiToken', title: 'API token', secret: true, required: true },
+    ],
+    check: { path: '/users/me.json' },
+    resources: [
+      { name: 'tickets', path: '/tickets.json', recordsPath: 'tickets', primaryKey: 'id', cursorField: 'updated_at', filterClientSide: true, pagination: { type: 'link', nextUrlPath: 'next_page' } },
+      { name: 'users', path: '/users.json', recordsPath: 'users', primaryKey: 'id', cursorField: 'updated_at', filterClientSide: true, pagination: { type: 'link', nextUrlPath: 'next_page' } },
+      { name: 'organizations', path: '/organizations.json', recordsPath: 'organizations', primaryKey: 'id', cursorField: 'updated_at', filterClientSide: true, pagination: { type: 'link', nextUrlPath: 'next_page' } },
+      { name: 'groups', path: '/groups.json', recordsPath: 'groups', primaryKey: 'id', pagination: { type: 'link', nextUrlPath: 'next_page' } },
+      { name: 'ticket_audits', path: '/ticket_audits.json', recordsPath: 'audits', primaryKey: 'id', pagination: { type: 'link', nextUrlPath: 'next_page' } },
+      { name: 'satisfaction_ratings', path: '/satisfaction_ratings.json', recordsPath: 'satisfaction_ratings', primaryKey: 'id', cursorField: 'updated_at', filterClientSide: true, pagination: { type: 'link', nextUrlPath: 'next_page' } },
+      { name: 'ticket_comments', path: '/tickets/{parentId}/comments.json', recordsPath: 'comments', primaryKey: 'id', child: { parent: 'tickets', path: (p) => `/tickets/${p.id}/comments.json` } },
+    ],
+  },
+
+  {
+    name: 'source-freshdesk',
+    displayName: 'Freshdesk',
+    description: 'Tickets, contacts, companies, agents and conversations.',
+    catalogSlug: 'freshdesk', category: 'Applications', icon: 'freshdesk',
+    baseUrl: 'https://{domain}.freshdesk.com/api/v2',
+    auth: { type: 'basic', username: '{apiKey}', password: 'X' },
+    config: [
+      { key: 'domain', title: 'Domain', required: true, help: 'acme in acme.freshdesk.com' },
+      { key: 'apiKey', title: 'API key', secret: true, required: true },
+    ],
+    check: { path: '/agents/me' },
+    resources: [
+      { name: 'tickets', path: '/tickets', recordsPath: null, primaryKey: 'id', cursorField: 'updated_at', incrementalParam: 'updated_since', pagination: { type: 'page', pageParam: 'page', limitParam: 'per_page', pageSize: 100 } },
+      { name: 'contacts', path: '/contacts', recordsPath: null, primaryKey: 'id', cursorField: 'updated_at', incrementalParam: 'updated_since', pagination: { type: 'page', pageParam: 'page', limitParam: 'per_page', pageSize: 100 } },
+      { name: 'companies', path: '/companies', recordsPath: null, primaryKey: 'id', cursorField: 'updated_at', incrementalParam: 'updated_since', pagination: { type: 'page', pageParam: 'page', limitParam: 'per_page', pageSize: 100 } },
+      { name: 'agents', path: '/agents', recordsPath: null, primaryKey: 'id', pagination: { type: 'page', pageParam: 'page', limitParam: 'per_page', pageSize: 100 } },
+      { name: 'groups', path: '/groups', recordsPath: null, primaryKey: 'id' },
+      { name: 'conversations', path: '/tickets/{parentId}/conversations', recordsPath: null, primaryKey: 'id', child: { parent: 'tickets', path: (p) => `/tickets/${p.id}/conversations` } },
+    ],
+  },
+
+  {
+    name: 'source-intercom',
+    displayName: 'Intercom',
+    description: 'Contacts, companies, conversations, segments and admins.',
+    catalogSlug: 'intercom', category: 'Applications', icon: 'intercom',
+    baseUrl: 'https://api.intercom.io',
+    auth: { type: 'bearer' },
+    headers: { 'Intercom-Version': '2.11' },
+    config: [{ key: 'accessToken', title: 'Access token', secret: true, required: true }],
+    check: { path: '/me' },
+    resources: [
+      { name: 'contacts', path: '/contacts', recordsPath: 'data', primaryKey: 'id', cursorField: 'updated_at', filterClientSide: true, pagination: { type: 'cursor', cursorParam: 'starting_after', cursorPath: 'pages.next.starting_after' } },
+      { name: 'companies', path: '/companies', recordsPath: 'data', primaryKey: 'id', cursorField: 'updated_at', filterClientSide: true, pagination: { type: 'link', nextUrlPath: 'pages.next' } },
+      { name: 'conversations', path: '/conversations', recordsPath: 'conversations', primaryKey: 'id', cursorField: 'updated_at', filterClientSide: true, pagination: { type: 'cursor', cursorParam: 'starting_after', cursorPath: 'pages.next.starting_after' } },
+      { name: 'segments', path: '/segments', recordsPath: 'segments', primaryKey: 'id' },
+      { name: 'admins', path: '/admins', recordsPath: 'admins', primaryKey: 'id' },
+      { name: 'tags', path: '/tags', recordsPath: 'data', primaryKey: 'id' },
+    ],
+  },
+
+  {
+    name: 'source-helpscout',
+    displayName: 'Help Scout',
+    description: 'Conversations, customers, mailboxes and users.',
+    catalogSlug: 'helpscout', category: 'Applications', icon: 'helpscout',
+    baseUrl: 'https://api.helpscout.net/v2',
+    auth: { type: 'bearer' },
+    config: [{ key: 'accessToken', title: 'OAuth access token', secret: true, required: true }],
+    check: { path: '/users/me' },
+    resources: [
+      { name: 'conversations', path: '/conversations', recordsPath: '_embedded.conversations', primaryKey: 'id', cursorField: 'userUpdatedAt', filterClientSide: true, pagination: { type: 'link', nextUrlPath: '_links.next.href' } },
+      { name: 'customers', path: '/customers', recordsPath: '_embedded.customers', primaryKey: 'id', cursorField: 'updatedAt', filterClientSide: true, pagination: { type: 'link', nextUrlPath: '_links.next.href' } },
+      { name: 'mailboxes', path: '/mailboxes', recordsPath: '_embedded.mailboxes', primaryKey: 'id', pagination: { type: 'link', nextUrlPath: '_links.next.href' } },
+      { name: 'users', path: '/users', recordsPath: '_embedded.users', primaryKey: 'id', pagination: { type: 'link', nextUrlPath: '_links.next.href' } },
+    ],
+  },
+
+  {
+    name: 'source-gorgias',
+    displayName: 'Gorgias',
+    description: 'Tickets, customers, messages and satisfaction surveys.',
+    catalogSlug: 'gorgias', category: 'Applications', icon: 'gorgias',
+    baseUrl: 'https://{domain}.gorgias.com/api',
+    auth: { type: 'basic', username: '{email}', password: '{apiKey}' },
+    config: [
+      { key: 'domain', title: 'Subdomain', required: true, help: 'acme in acme.gorgias.com' },
+      { key: 'email', title: 'Account email', required: true },
+      { key: 'apiKey', title: 'API key', secret: true, required: true },
+    ],
+    check: { path: '/account' },
+    resources: [
+      { name: 'tickets', path: '/tickets', recordsPath: 'data', primaryKey: 'id', cursorField: 'updated_datetime', filterClientSide: true, pagination: { type: 'cursor', cursorParam: 'cursor', cursorPath: 'meta.next_cursor' } },
+      { name: 'customers', path: '/customers', recordsPath: 'data', primaryKey: 'id', cursorField: 'updated_datetime', filterClientSide: true, pagination: { type: 'cursor', cursorParam: 'cursor', cursorPath: 'meta.next_cursor' } },
+      { name: 'messages', path: '/tickets/{parentId}/messages', recordsPath: 'data', primaryKey: 'id', child: { parent: 'tickets', path: (p) => `/tickets/${p.id}/messages` } },
+      { name: 'satisfaction_surveys', path: '/satisfaction-surveys', recordsPath: 'data', primaryKey: 'id', pagination: { type: 'cursor', cursorParam: 'cursor', cursorPath: 'meta.next_cursor' } },
+      { name: 'users', path: '/users', recordsPath: 'data', primaryKey: 'id' },
+    ],
+  },
+
+  {
+    name: 'source-front',
+    displayName: 'Front',
+    description: 'Conversations, contacts, inboxes and teammates.',
+    catalogSlug: 'front', category: 'Applications', icon: 'front',
+    baseUrl: 'https://api2.frontapp.com',
+    auth: { type: 'bearer' },
+    config: [{ key: 'accessToken', title: 'API token', secret: true, required: true }],
+    check: { path: '/me' },
+    resources: [
+      { name: 'conversations', path: '/conversations', recordsPath: '_results', primaryKey: 'id', cursorField: 'last_message.received_at', filterClientSide: true, pagination: { type: 'link', nextUrlPath: '_links.next' } },
+      { name: 'contacts', path: '/contacts', recordsPath: '_results', primaryKey: 'id', cursorField: 'updated_at', filterClientSide: true, pagination: { type: 'link', nextUrlPath: '_links.next' } },
+      { name: 'inboxes', path: '/inboxes', recordsPath: '_results', primaryKey: 'id', pagination: { type: 'link', nextUrlPath: '_links.next' } },
+      { name: 'teammates', path: '/teammates', recordsPath: '_results', primaryKey: 'id', pagination: { type: 'link', nextUrlPath: '_links.next' } },
+      { name: 'tags', path: '/tags', recordsPath: '_results', primaryKey: 'id' },
+    ],
+  },
+];

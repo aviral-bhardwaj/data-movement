@@ -9,6 +9,7 @@ class RestApiSource extends BaseSource {
     this.displayName = 'REST API';
     this.description = 'Generic REST API source: auth, pagination, incremental cursors, nested record paths.';
     this.icon = '🌐';
+    this.category = 'Functions';
     this.supportedSyncModes = ['full_refresh', 'incremental'];
   }
 

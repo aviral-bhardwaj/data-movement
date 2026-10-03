@@ -8,6 +8,8 @@ class MongodbDestination extends BaseDestination {
     this.displayName = 'MongoDB';
     this.description = 'Load data into MongoDB collections with upsert on primary key.';
     this.icon = '🍃';
+    this.category = 'Database';
+    this.catalogSlug = null;
   }
 
   spec() {

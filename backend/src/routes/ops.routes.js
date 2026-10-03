@@ -24,6 +24,31 @@ router.get('/health', asyncWrap(async (_req, res) => {
 // webhook ingestion also available under the API prefix for convenience
 router.use('/webhooks', require('./webhook.routes'));
 
+// public stats for the marketing home page (no auth)
+router.get('/public/stats', asyncWrap(async (_req, res) => {
+  const [defs, conns, rows] = await Promise.all([
+    db.one(`SELECT COUNT(*) total, COUNT(*) FILTER (WHERE implemented) implemented,
+                   COUNT(*) FILTER (WHERE type='source') sources,
+                   COUNT(*) FILTER (WHERE type='destination') destinations
+            FROM connector_definitions`),
+    db.one(`SELECT COUNT(*) total FROM connections`),
+    db.one(`SELECT COALESCE(SUM(records_written),0) rows_written FROM sync_jobs`),
+  ]);
+  res.json({ connectors: defs, connections: conns.total, rowsWritten: rows.rows_written });
+}));
+
+// public connector list for the landing page wall / public catalog preview
+router.get('/public/connectors', asyncWrap(async (req, res) => {
+  const limit = Math.min(parseInt(req.query.limit || '80', 10), 400);
+  const rows = await db.many(
+    `SELECT name, display_name, icon, category, badge, implemented
+     FROM connector_definitions
+     WHERE type='source'
+     ORDER BY implemented DESC, display_name
+     LIMIT $1`, [limit]);
+  res.json(rows);
+}));
+
 router.use(authenticate);
 
 // ---- sync jobs ----

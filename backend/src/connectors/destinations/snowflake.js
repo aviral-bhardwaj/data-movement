@@ -12,6 +12,8 @@ class SnowflakeDestination extends BaseDestination {
     this.displayName = 'Snowflake';
     this.description = 'Load data into Snowflake via staged JSON + COPY INTO. Requires snowflake-sdk.';
     this.icon = '❄️';
+    this.category = 'Warehouse';
+    this.catalogSlug = 'snowflake';
   }
 
   spec() {
