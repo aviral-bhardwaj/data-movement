@@ -1,0 +1,38 @@
+{
+  "name": "@datamove/backend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "DataMove backend: API server, scheduler, worker, connector framework",
+  "main": "src/api/server.js",
+  "scripts": {
+    "api": "node src/api/server.js",
+    "scheduler": "node src/scheduler/index.js",
+    "worker": "node src/worker/index.js",
+    "migrate": "node src/core/migrate.js",
+    "seed": "node src/seed/seed.js",
+    "demo": "node src/seed/demo-setup.js",
+    "cli": "node src/cli.js"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.682.0",
+    "axios": "^1.7.9",
+    "bcryptjs": "^2.4.3",
+    "better-sqlite3": "^11.7.0",
+    "bullmq": "^5.34.0",
+    "cors": "^2.8.5",
+    "csv-parse": "^5.6.0",
+    "csv-stringify": "^6.5.2",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "helmet": "^8.0.0",
+    "ioredis": "^5.4.2",
+    "jsonwebtoken": "^9.0.2",
+    "kafkajs": "^2.2.4",
+    "mongodb": "^6.12.0",
+    "mysql2": "^3.11.5",
+    "node-cron": "^3.0.3",
+    "nodemailer": "^6.9.16",
+    "pg": "^8.13.1",
+    "pg-logical-replication": "^2.3.6"
+  }
+}

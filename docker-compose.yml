@@ -1,0 +1,91 @@
+version: "3.9"
+
+# DataMove platform: metadata DB + queue + services
+# Usage:
+#   docker compose up -d postgres redis          # infra only (dev mode)
+#   docker compose up -d --build                 # full stack
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: datamove
+      POSTGRES_PASSWORD: datamove
+      POSTGRES_DB: datamove
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U datamove"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build: .
+    command: npm -w backend run api
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://datamove:datamove@postgres:5432/datamove
+      REDIS_HOST: redis
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  scheduler:
+    build: .
+    command: npm -w backend run scheduler
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://datamove:datamove@postgres:5432/datamove
+      REDIS_HOST: redis
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    build: .
+    command: npm -w backend run worker
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://datamove:datamove@postgres:5432/datamove
+      REDIS_HOST: redis
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    deploy:
+      replicas: 2
+
+  web:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    ports:
+      - "5173:80"
+    depends_on:
+      - api
+
+volumes:
+  pgdata:
+  redisdata:
